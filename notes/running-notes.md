@@ -2,6 +2,10 @@
 
 ## 01/23/2023
 
+More relevant prior work:
+
+1. [Reliable Visual Question Answering: Abstain Rather Than Answer Incorrectly](https://arxiv.org/pdf/2204.13631.pdf) - ECCV 2022
+
 Next steps:
 
 Experiment 1 - evaluate model with an image and randomly selected question, how often does it admit "I don't know" etc. vs attempting to provide an answer
