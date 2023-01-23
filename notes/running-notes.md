@@ -1,8 +1,18 @@
 # running notes
 
+## 01/23/2023
+
+Next steps:
+
+Experiment 1 - evaluate model with an image and randomly selected question, how often does it admit "I don't know" etc. vs attempting to provide an answer
+
+- task: VQA
+- model: ?
+- dataset: ?
+
 ## 11/29/2022
 
-### Initial idea
+### initial idea
 
 Try methods to prevent hallucination of incorrect answers/unanswerable questions, for example by adding an explicit prompt (discrete and/or continuous)
 
@@ -12,18 +22,18 @@ Try methods to prevent hallucination of incorrect answers/unanswerable questions
 
 - human study to assess what fraction of these random image/question pairs are actually meaningless and how often they happen to actually work well together?
 
-### Potential research questions
+### potential research questions
 
 - How easy is to train a model that identifies when a question is meaningless for a given image?
 - What would it take to effectively build a system that could consider this scenario?
 
-### Motivation
+### motivation
 
 [Flamingo paper, DeepMind April 2022](https://arxiv.org/pdf/2204.14198.pdf): Appendix D.1, Figure 13
 
 - Flamingo still suffers from “occasional hallucinations and ungrounded guesses"
 
-### Related Work
+### related Work
 
 [Survey on hallucination in NLG](https://arxiv.org/pdf/2202.03629.pdf): Section 12
 
