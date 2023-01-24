@@ -11,8 +11,14 @@ Next steps:
 Experiment 1 - evaluate model with an image and randomly selected question, how often does it admit "I don't know" etc. vs attempting to provide an answer
 
 - task: VQA
-- model: ?
-- dataset: ?
+- models:
+
+    1. Pythia (70.24%), an optimization of the widely used bottom-up top-down VQA model
+    2. ViLBERT (70.92%), a twostream transformer
+    3. VisualBERT (71.00%), a single-stream transformer, both of which use multimodal pretraining
+    4. CLIP-ViL (74.17%), which is the MoVie+MCAN model with a visual encoder from CLIP
+
+- dataset: VQA v2
 
 ## 11/29/2022
 
