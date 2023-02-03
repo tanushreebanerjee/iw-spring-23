@@ -1,25 +1,27 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[3]:
+# In[42]:
 
 
 from datasets import load_dataset, load_dataset_builder, Image, get_dataset_split_names
 import pandas as pd
 import base64
 import io
+import numpy as np
+import pickle as pkl
 
 
-# In[4]:
+# In[43]:
 
 
 DATASET_NAME = "HuggingFaceM4/VQAv2"
 
 ROOT = f".."
-DATASET_PATH = f"{ROOT}/datasets/VQAv2.csv"
+DATASET_PATH = f"{ROOT}/datasets/VQAv2-1000.csv"
 
 
-# In[5]:
+# In[44]:
 
 
 ds_builder = load_dataset_builder(DATASET_NAME)
@@ -29,7 +31,7 @@ dataset = load_dataset(DATASET_NAME, streaming=True)
 ds_split_names = get_dataset_split_names(DATASET_NAME)
 
 
-# In[6]:
+# In[45]:
 
 
 question_type = []
@@ -43,7 +45,7 @@ image = []
 split = []
 
 
-# In[7]:
+# In[46]:
 
 
 for split_name in ["test"]:#ds_split_names:
@@ -57,28 +59,27 @@ for split_name in ["test"]:#ds_split_names:
         question_id.append(example["question_id"])
         question.append(example["question"])
         
-        ##
         img = example["image"]
-        output = io.BytesIO()
-        img.save(output, format="jpeg")
-        image_as_string = base64.b64encode(output.getvalue())
         
-        #encrypting/decrypting
-
-        # img=Image.open(io.BytesIO(base64.b64decode(image_as_string)))
-        # img.save('string.png') 
-    
-        ##
         
-        image.append(image_as_string)
+        
+        img_arr = np.array(img)
+        
+        img_bytes_obj = pkl.dumps(img_arr)
+       
+        img_str = base64.b64encode(img_bytes_obj)
+       
+        image.append(img_str)
         split.append(split_name)
+        break
+    break
     
     
         
 
 
 
-# In[ ]:
+# In[49]:
 
 
 df_dict = {"question_type": question_type,
