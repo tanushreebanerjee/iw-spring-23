@@ -38,6 +38,9 @@ import numpy as np
 from PIL import Image
 from tqdm.auto import tqdm
 
+
+
+import base64
 import cv2
 import requests
 import wget
@@ -515,6 +518,23 @@ def get_data(query, delim=","):
     return data
 
 
+
+def get_image_from_pil(img_pil_str):
+    
+    try:
+        
+        img=Image.open(BytesIO(base64.b64decode(img_pil_str)))
+        
+        img_arr = np.array(img) 
+        print("img_arr get_image_from_pil", img_arr)
+    
+    except Exception as ex:
+        print(ex)
+        print(img_pil_str)
+        img_arr = None
+    
+    return img_arr
+
 def get_image_from_url(url):
     response = requests.get(url)
     img = np.array(Image.open(BytesIO(response.content)))
@@ -548,7 +568,8 @@ def img_tensorize(im, input_format="RGB"):
     if os.path.isfile(im):
         img = cv2.imread(im)
     else:
-        img = get_image_from_url(im)
+        img = get_image_from_pil(im)
+        #img = get_image_from_url(im)
         assert img is not None, f"could not connect to: {im}"
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     if input_format == "RGB":

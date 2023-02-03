@@ -100,6 +100,7 @@ class Preprocess:
         return torch.stack(images), torch.tensor(image_sizes)
 
     def __call__(self, images, single_image=False):
+        
         with torch.no_grad():
             if not isinstance(images, list):
                 images = [images]
@@ -109,12 +110,16 @@ class Preprocess:
                 if isinstance(images[i], torch.Tensor):
                     images.insert(i, images.pop(i).to(self.device).float())
                 elif not isinstance(images[i], torch.Tensor):
+                    print(self.input_format)
                     images.insert(
                         i,
                         torch.as_tensor(img_tensorize(images.pop(i), input_format=self.input_format))
                         .to(self.device)
                         .float(),
                     )
+           
+            
+           
             # resize smallest edge
             raw_sizes = torch.tensor([im.shape[:2] for im in images])
             images = self.aug(images)
