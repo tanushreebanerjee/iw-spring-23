@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -N 1
-#SBATCH --job-name=load_datasets_iw_vqa_test_1000
+#SBATCH --job-name=load_datasets_iw_vqa_full
 #SBATCH --ntasks-per-node=1
 #SBATCH --output=load_datasets.txt
 #SBATCH --cpus-per-task=12
