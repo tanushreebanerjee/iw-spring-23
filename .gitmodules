@@ -1,3 +1,6 @@
 [submodule "reliable_vqa"]
 	path = reliable_vqa
 	url = https://github.com/tanushreebanerjee/reliable_vqa.git
+[submodule "VQA"]
+	path = VQA
+	url = https://github.com/tanushreebanerjee/VQA.git
