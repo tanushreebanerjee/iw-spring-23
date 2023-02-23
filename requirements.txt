@@ -17,7 +17,7 @@ libgomp=12.2.0=h65d4601_19
 libsqlite=3.40.0=h753d276_0
 libstdcxx-ng=12.2.0=h46fd767_19
 libzlib=1.2.13=h166bdaf_4
-matplotlib=2.2.5=pypi_0
+matplotlib=2.2.5= pypi_0
 ncurses=6.3=h27087fc_1
 networkx=2.2=pypi_0
 numpy=1.16.6=pypi_0
