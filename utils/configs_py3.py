@@ -25,4 +25,5 @@ quesTypesFile = "%s/QuestionTypes/%s_question_types.txt" % (dataDir, dataType)
 resFile = '%s/Results/%s%s_%s_%s_results.json' %(dataDir, versionType, taskType, dataType, dataSubType)
 
 experimentDatasetDir = f'{ROOT}/data/{EXPERIMENT_NAME}'
-dataset_path = "%s/%s%s_%s_%s.csv" % (experimentDatasetDir, versionType, taskType, dataType, dataSubType)
+input_path = "%s/%s%s_%s_%s_input.csv" % (experimentDatasetDir, versionType, taskType, dataType, dataSubType)
+output_path = "%s/%s%s_%s_%s_output.csv" % (experimentDatasetDir, versionType, taskType, dataType, dataSubType)
