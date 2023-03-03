@@ -47,7 +47,14 @@ def get_raw_val_prediction():
         
             
         image = Image.open(imgPath)
-        text = row['random_question']
+        
+        
+        # ground truth question for the first half of the dataset, and random question for the second half 
+        if index < len(val_df)/2:
+            text= row['original_question']
+        else:
+            text = row['random_question']
+            
         
         # prepare inputs
         try:

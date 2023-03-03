@@ -1,8 +1,10 @@
 from datetime import date
 
 today = date.today()
+last_date = "2023-02-24"
 
-EXPERIMENT_NAME = f"{today}_abstain_softmax_linear_classifier"
+VARIANT_NAME = f"abstain_softmax_linear_classifier"
+EXPERIMENT_NAME = f"{last_date}_{VARIANT_NAME}"
 CHECKPOINT = "dandelin/vilt-b32-finetuned-vqa" # ViLT for VQA
 ROOT = f".."
 RANDOM_SEED = 42
