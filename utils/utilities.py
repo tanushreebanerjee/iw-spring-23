@@ -61,7 +61,7 @@ def get_raw_val_prediction():
             print(e, "==> Skipping this image")
           
             original_model_outputs.append("N/A")
-            softmax_outputs.append("N/A")
+            softmax_outputs.append(0)
             continue                
         # forward pass
         with torch.no_grad():
@@ -75,21 +75,9 @@ def get_raw_val_prediction():
         softmax_outputs.append(softmax_output)
         
         original_model_outputs.append(model.config.id2label[idx])
-        
-        
-    
+  
     val_df[f'original_model_outputs'] = original_model_outputs
     val_df['softmax_outputs'] = softmax_outputs
-        
-        # if index < 5:
-        #     print("Random Question:", text)
-        #     print("Random Question answer before thresholding:", model.config.id2label[idx])
-        #     print("Ramdom Question answer after thresholding:", model_output)
-        #     print("threshold:", threshold)
-        #     print("Confidence:", logits[0, idx].item())
-        #     print("Softmax output: ", softmax_output)
-        #     print("Original Question:", row['original_question'])
-        #     print("Original Question answer:", row['multiple_choice_answer'])
     
     return val_df, original_model_outputs, softmax_outputs
 

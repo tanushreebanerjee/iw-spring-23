@@ -2,7 +2,7 @@ from datetime import date
 
 today = date.today()
 
-EXPERIMENT_NAME = f"{today}_abstain_softmax_thresholding"
+EXPERIMENT_NAME = f"{today}_abstain_softmax_linear_classifier"
 CHECKPOINT = "dandelin/vilt-b32-finetuned-vqa" # ViLT for VQA
 ROOT = f".."
 RANDOM_SEED = 42
