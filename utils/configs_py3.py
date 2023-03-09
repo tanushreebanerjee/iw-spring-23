@@ -25,6 +25,7 @@ quesFile    ='%s/Questions/%s%s_%s_%s_questions.json'%(dataDir, versionType, tas
 imgDir 		= '%s/Images/%s/%s/' %(dataDir, dataType, dataSubType)
 quesTypesFile = "%s/QuestionTypes/%s_question_types.txt" % (dataDir, dataType)
 resFile = '%s/Results/%s%s_%s_%s_results.json' %(dataDir, versionType, taskType, dataType, dataSubType)
+fileTypes   = ['results', 'accuracy', 'evalQA', 'evalQuesType', 'evalAnsType'] 
 
 experimentDatasetDir = f'{ROOT}/data/{EXPERIMENT_NAME}'
 input_path = "%s/%s%s_%s_%s_input.csv" % (experimentDatasetDir, versionType, taskType, dataType, dataSubType)
