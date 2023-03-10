@@ -1,4 +1,4 @@
-from transformers import ViltProcessor, ViltForQuestionAnswering
+from transformers import ViltProcessor, ViltForQuestionAnswering, YolosFeatureExtractor, YolosForObjectDetection, YolosImageProcessor
 from PIL import Image
 import configs_py3 as configs
 import matplotlib.pyplot as plt
@@ -6,6 +6,11 @@ import skimage.io as io
 import torch
 import os
 import pandas as pd
+import numpy as np
+from torchvision.utils import draw_bounding_boxes
+import torchvision.transforms as transforms
+import torchvision
+from torchvision.io import read_image
 
 def load_dataset():
     df = pd.read_csv(configs.input_path)
@@ -87,4 +92,55 @@ def get_raw_val_prediction():
     val_df['softmax_outputs'] = softmax_outputs
     
     return val_df, original_model_outputs, softmax_outputs
+
+def display_objects_in_image(img_path, obj_detection_checkpoint=configs.OBJECT_DETECTION_CHECKPOINT, obj_detection_threshold=0.9):
+    feature_extractor = YolosFeatureExtractor.from_pretrained(obj_detection_checkpoint)
+    model = YolosForObjectDetection.from_pretrained(obj_detection_checkpoint)
+    processor = YolosImageProcessor.from_pretrained(obj_detection_checkpoint)
+    
+    image_tensor = read_image(img_path)
+    image_pil = torchvision.transforms.ToPILImage()(image_tensor)
+    
+    inputs = feature_extractor(images=image_pil, return_tensors="pt")
+    outputs = model(**inputs)
+    
+    # convert outputs (bounding boxes and class logits) to COCO API
+    # let's only keep detections with score > obj_detection_threshold
+    target_sizes = torch.tensor([image_pil.size[::-1]])
+    results = processor.post_process_object_detection(outputs, target_sizes=target_sizes, threshold=obj_detection_threshold)[0]
+    labels = [model.config.id2label[int(label)] for label in results["labels"]]
+    
+    # draw bounding box and fill color
+    annotated_image = draw_bounding_boxes(image_tensor, results["boxes"], labels=labels)
+    
+    # transform this image to PIL image
+    annotated_image = torchvision.transforms.ToPILImage()(annotated_image)
+    
+    
+    return annotated_image
+
+
+
+def get_objects_in_image(img_path, obj_detection_checkpoint=configs.OBJECT_DETECTION_CHECKPOINT, obj_detection_threshold=0.9):
+    feature_extractor = YolosFeatureExtractor.from_pretrained(obj_detection_checkpoint)
+    model = YolosForObjectDetection.from_pretrained(obj_detection_checkpoint)
+    processor = YolosImageProcessor.from_pretrained(obj_detection_checkpoint)
+    
+    image_tensor = read_image(img_path)
+    image_pil = torchvision.transforms.ToPILImage()(image_tensor)
+    
+    inputs = feature_extractor(images=image_pil, return_tensors="pt")
+    outputs = model(**inputs)
+    
+    # convert outputs (bounding boxes and class logits) to COCO API
+    # let's only keep detections with score > obj_detection_threshold
+    target_sizes = torch.tensor([image_pil.size[::-1]])
+    results = processor.post_process_object_detection(outputs, target_sizes=target_sizes, threshold=obj_detection_threshold)[0]
+    labels = [model.config.id2label[int(label)] for label in results["labels"]]
+    
+    scores = [score.item() for score in results["scores"]]
+    
+    objects = dict(zip(labels, scores))
+    
+    return objects
 

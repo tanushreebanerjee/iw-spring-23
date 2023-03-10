@@ -6,6 +6,7 @@ last_date = "2023-02-24"
 VARIANT_NAME = f"abstain_softmax_linear_classifier"
 EXPERIMENT_NAME = f"{last_date}_{VARIANT_NAME}"
 CHECKPOINT = "dandelin/vilt-b32-finetuned-vqa" # ViLT for VQA
+OBJECT_DETECTION_CHECKPOINT = "hustvl/yolos-tiny" # YOLOv3-tiny for object detection
 ROOT = f".."
 RANDOM_SEED = 42
 
