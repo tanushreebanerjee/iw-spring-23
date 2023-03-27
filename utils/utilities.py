@@ -10,6 +10,8 @@ import pandas as pd
 from torchvision.utils import draw_bounding_boxes
 import torchvision
 from torchvision.io import read_image
+from nltk.corpus import wordnet
+import nltk
 
 def get_preds(df):
     # get outputs with softmax scores
@@ -158,8 +160,12 @@ def annotate_objects_in_image(img_path,
                               model=YolosForObjectDetection.from_pretrained(configs.OBJECT_DETECTION_CHECKPOINT),
                               bbox_width=3):
     
-    
     image_tensor = read_image(img_path)
+    
+    if results == None:
+        return torchvision.transforms.ToPILImage()(image_tensor)
+    
+    
     labels = [model.config.id2label[int(label)] for label in results["labels"]]
     
     annotated_image = draw_bounding_boxes(image_tensor, results["boxes"], labels=labels, width=bbox_width)
@@ -170,6 +176,9 @@ def annotate_objects_in_image(img_path,
 
 def get_objects_in_image(results,
                          model=YolosForObjectDetection.from_pretrained(configs.OBJECT_DETECTION_CHECKPOINT)):
+    
+    if results == None:
+        return None
     
     labels = [model.config.id2label[int(label)] for label in results["labels"]]
     
@@ -189,3 +198,11 @@ def get_thresholded_output(original_model_outputs, softmax_outputs, threshold=0.
             thresholded_model_outputs.append(original_model_outputs[idx])
     return thresholded_model_outputs
 
+
+def get_synonyms(word):
+    synonyms = []
+    for syn in wordnet.synsets(word):
+        for l in syn.lemmas():
+            synonyms.append(l.name())
+    synonyms = [x.replace("_", " ") for x in synonyms]
+    return list(set(synonyms))
