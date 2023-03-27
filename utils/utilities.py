@@ -1,4 +1,5 @@
-from transformers import ViltProcessor, ViltForQuestionAnswering, YolosFeatureExtractor, YolosForObjectDetection, YolosImageProcessor
+from transformers import ViltProcessor, ViltForQuestionAnswering
+from transformers import YolosFeatureExtractor, YolosForObjectDetection, YolosImageProcessor
 from PIL import Image
 import configs_py3 as configs
 import matplotlib.pyplot as plt
@@ -10,7 +11,28 @@ from torchvision.utils import draw_bounding_boxes
 import torchvision
 from torchvision.io import read_image
 
-def load_dataset(split='all', num_train=configs.NUM_TRAIN, num_val=configs.NUM_VAL, num_test=configs.NUM_TEST, input_path=configs.input_path):
+def get_preds(df):
+    # get outputs with softmax scores
+    # first half of val set with original questions
+    # second half with random questions
+    
+
+    df_original, _, _ = get_raw_vqa_output(
+        df=df[:len(df)//2], 
+        random_question=False)
+
+    df_random, _, _ = get_raw_vqa_output(
+        df=df[len(df)//2:],
+        random_question=True)
+    #combine both dfs
+    df = pd.concat([df_original, df_random], ignore_index=True)
+    return df
+
+def load_dataset(split='all', 
+                 num_train=configs.NUM_TRAIN, 
+                 num_val=configs.NUM_VAL, 
+                 num_test=configs.NUM_TEST, 
+                 input_path=configs.input_path):
     
     
     df = pd.read_csv(input_path)
@@ -107,63 +129,63 @@ def get_raw_vqa_output(model=ViltForQuestionAnswering.from_pretrained(configs.CH
 
 def run_object_detection(img_path, 
                          model=YolosForObjectDetection.from_pretrained(configs.OBJECT_DETECTION_CHECKPOINT), 
-                         feature_extractor=YolosFeatureExtractor.from_pretrained(configs.OBJECT_DETECTION_CHECKPOINT)):
+                         feature_extractor=YolosFeatureExtractor.from_pretrained(configs.OBJECT_DETECTION_CHECKPOINT),
+                         processor=YolosImageProcessor.from_pretrained(configs.OBJECT_DETECTION_CHECKPOINT),
+                         threshold=0.9):
     
     image_tensor = read_image(img_path)
     image_pil = torchvision.transforms.ToPILImage()(image_tensor)
     
-    inputs = feature_extractor(images=image_pil, return_tensors="pt")
+    try:
+        inputs = feature_extractor(images=image_pil, return_tensors="pt")
+    except Exception as e:
+        I = io.imread(img_path)
+        
+        plt.imshow(I)
+        plt.axis('off')
+        plt.show()
+        print(e, "==> Skipping this image")
+        return None
+
+    
     outputs = model(**inputs)
-    return outputs
+    target_sizes = torch.tensor([image_pil.size[::-1]])
+    results = processor.post_process_object_detection(outputs, target_sizes=target_sizes, threshold=threshold)[0]
+    return results
 
 def annotate_objects_in_image(img_path, 
+                              results,
                               model=YolosForObjectDetection.from_pretrained(configs.OBJECT_DETECTION_CHECKPOINT),
-                              feature_extractor=YolosFeatureExtractor.from_pretrained(configs.OBJECT_DETECTION_CHECKPOINT),
-                              processor=YolosImageProcessor.from_pretrained(configs.OBJECT_DETECTION_CHECKPOINT),
-                              threshold=0.9,
                               bbox_width=3):
     
     
     image_tensor = read_image(img_path)
-    image_pil = torchvision.transforms.ToPILImage()(image_tensor)
-   
-    outputs = run_object_detection(img_path, model, feature_extractor)
-    
-
-    target_sizes = torch.tensor([image_pil.size[::-1]])
-    results = processor.post_process_object_detection(outputs, target_sizes=target_sizes, threshold=threshold)[0]
     labels = [model.config.id2label[int(label)] for label in results["labels"]]
     
-
     annotated_image = draw_bounding_boxes(image_tensor, results["boxes"], labels=labels, width=bbox_width)
-    
     annotated_image = torchvision.transforms.ToPILImage()(annotated_image)
     
     
     return annotated_image
 
-
-
-def get_objects_in_image(img_path, 
-                         model=YolosForObjectDetection.from_pretrained(configs.OBJECT_DETECTION_CHECKPOINT),
-                         processor=YolosImageProcessor.from_pretrained(configs.OBJECT_DETECTION_CHECKPOINT),
-                         feature_extractor=YolosFeatureExtractor.from_pretrained(configs.OBJECT_DETECTION_CHECKPOINT),
-                         threshold=0.9):
+def get_objects_in_image(results,
+                         model=YolosForObjectDetection.from_pretrained(configs.OBJECT_DETECTION_CHECKPOINT)):
     
-    
-    image_tensor = read_image(img_path)
-    image_pil = torchvision.transforms.ToPILImage()(image_tensor)
-    
-    
-    outputs = run_object_detection(img_path, model, feature_extractor)
-    
-    target_sizes = torch.tensor([image_pil.size[::-1]])
-    results = processor.post_process_object_detection(outputs, target_sizes=target_sizes, threshold=threshold)[0]
     labels = [model.config.id2label[int(label)] for label in results["labels"]]
     
     scores = [score.item() for score in results["scores"]]
     
-    objects = dict(zip(labels, scores))
+    objects_in_image = dict(zip(labels, scores))
     
-    return objects
+    return objects_in_image
+
+def get_thresholded_output(original_model_outputs, softmax_outputs, threshold=0.5):
+    thresholded_model_outputs = []
+    for idx in range(len(softmax_outputs)):
+        
+        if softmax_outputs[idx] < threshold:
+            thresholded_model_outputs.append("ABSTAIN")
+        else:
+            thresholded_model_outputs.append(original_model_outputs[idx])
+    return thresholded_model_outputs
 
