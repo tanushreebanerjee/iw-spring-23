@@ -6,43 +6,44 @@ import skimage.io as io
 import torch
 import os
 import pandas as pd
-import numpy as np
 from torchvision.utils import draw_bounding_boxes
-import torchvision.transforms as transforms
 import torchvision
 from torchvision.io import read_image
 
-def load_dataset():
-    df = pd.read_csv(configs.input_path)
-    train_df = df[:configs.NUM_TRAIN]
-    val_df = df[configs.NUM_TRAIN:configs.NUM_TRAIN + configs.NUM_VAL]
-    test_df = df[configs.NUM_TRAIN + configs.NUM_VAL:configs.NUM_TRAIN + configs.NUM_VAL + configs.NUM_TEST]
-
-    df = df.reset_index()  # make sure indexes pair with number of rows
-    train_df = train_df.reset_index()
-    val_df = val_df.reset_index()
-    test_df = test_df.reset_index()
+def load_dataset(split='all', num_train=configs.NUM_TRAIN, num_val=configs.NUM_VAL, num_test=configs.NUM_TEST, input_path=configs.input_path):
     
-    return df, train_df, val_df, test_df
-
-def get_model_children(model):
-    for idx, m in enumerate(model.named_modules()):
-        print(idx, '->', m)
-    return
-
-def get_raw_val_prediction():
     
-    model = ViltForQuestionAnswering.from_pretrained(configs.CHECKPOINT)
-    processor = ViltProcessor.from_pretrained(configs.CHECKPOINT)
+    df = pd.read_csv(input_path)
+    train_df = df[:num_train].reset_index()
+    val_df = df[num_train:num_train + num_val].reset_index()
+    test_df = df[num_train + num_val:num_train + num_val + num_test].reset_index()
+    
+    if split=='full':
+        return df   
+        
+    elif split == "train":
+        return train_df
+    
+    elif split == "val":
+        return val_df
+    
+    elif split == "test":
+        return test_df
+    
+    if split == "all":
+        return df, train_df, val_df, test_df
+    
+    else:
+        raise Exception("Invalid split argument. Must be one of 'full', 'train', 'val', 'test', or 'all'.")
 
-    df, train_df, val_df, test_df = load_dataset()
+def prepare_inputs(df, random_question=False):
+    
+    image_paths = []
+    question_inputs = []
 
     
-    original_model_outputs = []
- 
-    softmax_outputs = []
-
-    for index, row in val_df.iterrows():
+    for _, row in df.iterrows():
+        
         imgId = row['image_id']
         imgFilename = 'COCO_' + configs.dataSubType + '_'+ str(imgId).zfill(12) + '.jpg'
         imgPath = configs.imgDir + imgFilename
@@ -50,18 +51,29 @@ def get_raw_val_prediction():
         if not os.path.isfile(imgPath):
             continue
         
-            
-        image = Image.open(imgPath)
-        
-        
-        # ground truth question for the first half of the dataset, and random question for the second half 
-        if index < len(val_df)/2:
-            text= row['original_question']
-        else:
+        if random_question:
             text = row['random_question']
+        else:
+            text = row['original_question']
             
-        
-        # prepare inputs
+        image_paths.append(imgPath)
+        question_inputs.append(text)
+  
+    return image_paths, question_inputs
+
+def get_raw_vqa_output(model=ViltForQuestionAnswering.from_pretrained(configs.CHECKPOINT), 
+                       processor=ViltProcessor.from_pretrained(configs.CHECKPOINT), 
+                       df=load_dataset(split="val"), 
+                       random_question=False):
+    
+    original_model_outputs = []
+ 
+    softmax_outputs = []
+    
+    image_paths, question_inputs = prepare_inputs(df, random_question)
+    
+    for imgPath, text in zip(image_paths, question_inputs):
+        image = Image.open(imgPath)
         try:
             inputs = processor(image, text, return_tensors="pt")
         except Exception as e:
@@ -88,32 +100,43 @@ def get_raw_val_prediction():
         
         original_model_outputs.append(model.config.id2label[idx])
   
-    val_df[f'original_model_outputs'] = original_model_outputs
-    val_df['softmax_outputs'] = softmax_outputs
+    df['original_model_outputs'] = original_model_outputs
+    df['softmax_outputs'] = softmax_outputs
     
-    return val_df, original_model_outputs, softmax_outputs
+    return df, original_model_outputs, softmax_outputs
 
-def display_objects_in_image(img_path, obj_detection_checkpoint=configs.OBJECT_DETECTION_CHECKPOINT, obj_detection_threshold=0.9):
-    feature_extractor = YolosFeatureExtractor.from_pretrained(obj_detection_checkpoint)
-    model = YolosForObjectDetection.from_pretrained(obj_detection_checkpoint)
-    processor = YolosImageProcessor.from_pretrained(obj_detection_checkpoint)
+def run_object_detection(img_path, 
+                         model=YolosForObjectDetection.from_pretrained(configs.OBJECT_DETECTION_CHECKPOINT), 
+                         feature_extractor=YolosFeatureExtractor.from_pretrained(configs.OBJECT_DETECTION_CHECKPOINT)):
     
     image_tensor = read_image(img_path)
     image_pil = torchvision.transforms.ToPILImage()(image_tensor)
     
     inputs = feature_extractor(images=image_pil, return_tensors="pt")
     outputs = model(**inputs)
+    return outputs
+
+def annotate_objects_in_image(img_path, 
+                              model=YolosForObjectDetection.from_pretrained(configs.OBJECT_DETECTION_CHECKPOINT),
+                              feature_extractor=YolosFeatureExtractor.from_pretrained(configs.OBJECT_DETECTION_CHECKPOINT),
+                              processor=YolosImageProcessor.from_pretrained(configs.OBJECT_DETECTION_CHECKPOINT),
+                              threshold=0.9,
+                              bbox_width=3):
     
-    # convert outputs (bounding boxes and class logits) to COCO API
-    # let's only keep detections with score > obj_detection_threshold
+    
+    image_tensor = read_image(img_path)
+    image_pil = torchvision.transforms.ToPILImage()(image_tensor)
+   
+    outputs = run_object_detection(img_path, model, feature_extractor)
+    
+
     target_sizes = torch.tensor([image_pil.size[::-1]])
-    results = processor.post_process_object_detection(outputs, target_sizes=target_sizes, threshold=obj_detection_threshold)[0]
+    results = processor.post_process_object_detection(outputs, target_sizes=target_sizes, threshold=threshold)[0]
     labels = [model.config.id2label[int(label)] for label in results["labels"]]
     
-    # draw bounding box and fill color
-    annotated_image = draw_bounding_boxes(image_tensor, results["boxes"], labels=labels)
+
+    annotated_image = draw_bounding_boxes(image_tensor, results["boxes"], labels=labels, width=bbox_width)
     
-    # transform this image to PIL image
     annotated_image = torchvision.transforms.ToPILImage()(annotated_image)
     
     
@@ -121,21 +144,21 @@ def display_objects_in_image(img_path, obj_detection_checkpoint=configs.OBJECT_D
 
 
 
-def get_objects_in_image(img_path, obj_detection_checkpoint=configs.OBJECT_DETECTION_CHECKPOINT, obj_detection_threshold=0.9):
-    feature_extractor = YolosFeatureExtractor.from_pretrained(obj_detection_checkpoint)
-    model = YolosForObjectDetection.from_pretrained(obj_detection_checkpoint)
-    processor = YolosImageProcessor.from_pretrained(obj_detection_checkpoint)
+def get_objects_in_image(img_path, 
+                         model=YolosForObjectDetection.from_pretrained(configs.OBJECT_DETECTION_CHECKPOINT),
+                         processor=YolosImageProcessor.from_pretrained(configs.OBJECT_DETECTION_CHECKPOINT),
+                         feature_extractor=YolosFeatureExtractor.from_pretrained(configs.OBJECT_DETECTION_CHECKPOINT),
+                         threshold=0.9):
+    
     
     image_tensor = read_image(img_path)
     image_pil = torchvision.transforms.ToPILImage()(image_tensor)
     
-    inputs = feature_extractor(images=image_pil, return_tensors="pt")
-    outputs = model(**inputs)
     
-    # convert outputs (bounding boxes and class logits) to COCO API
-    # let's only keep detections with score > obj_detection_threshold
+    outputs = run_object_detection(img_path, model, feature_extractor)
+    
     target_sizes = torch.tensor([image_pil.size[::-1]])
-    results = processor.post_process_object_detection(outputs, target_sizes=target_sizes, threshold=obj_detection_threshold)[0]
+    results = processor.post_process_object_detection(outputs, target_sizes=target_sizes, threshold=threshold)[0]
     labels = [model.config.id2label[int(label)] for label in results["labels"]]
     
     scores = [score.item() for score in results["scores"]]
