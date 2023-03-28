@@ -235,7 +235,6 @@ def get_synonyms(word):
     synonyms = [x.replace("_", " ") for x in synonyms]
     return list(set(synonyms))
 
-
 def is_similar(obj1_str, obj2_str, threshold=configs.OBJECT_SIMILARITY_THRESHOLD):
     similarity = 0
     obj1_synsets = wn.synsets(obj1_str, pos=wn.NOUN)
@@ -269,6 +268,28 @@ def is_question_related(question, objects_in_image, threshold=configs.OBJECT_SIM
         return is_similar_final, max_similarity_score, most_similar_word_pair
     
     return is_similar_final, max_similarity_score, most_similar_word_pair
+
+def get_nouns(question):
+    pos_all = dict()
+    nouns = []
+    for w in question.split(" "):
+    
+        pos_l = set()
+        
+        for tmp in wn.synsets(w):
+            if tmp.name().split('.')[0] == w:
+                pos_l.add(tmp.pos())
+        pos_all[w] = pos_l
+   
+    for key, value in pos_all.items():
+        if "n" in value:
+            
+            nouns.append(key)
+            
+    # remove all ariticles
+    nouns = [noun for noun in nouns if noun not in ["a", "an", "the"]]
+    return nouns
+
 
 def get_similarities(df, mode, threshold=configs.OBJECT_SIMILARITY_THRESHOLD):
     is_similar = []
